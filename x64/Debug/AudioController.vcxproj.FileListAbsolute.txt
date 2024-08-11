@@ -1,0 +1,2 @@
+Z:\Dev\C++\AudioController\AudioController\x64\Debug\AudioController.exe
+Z:\Dev\C++\Repos\AudioController\x64\Debug\AudioController.exe
