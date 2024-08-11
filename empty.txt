@@ -1,0 +1,194 @@
+#include <iostream>
+#include <audiopolicy.h>
+#include <Audioclient.h>
+#include <mmdeviceapi.h>
+#include <comdef.h> 
+#include <combaseapi.h> 
+#include <propvarutil.h>
+#include <Functiondiscoverykeys_devpkey.h>
+#include <tlhelp32.h>
+#include <cwchar>
+#include <string.h>
+#include <Windows.h>
+#include <objbase.h>
+
+#pragma comment(lib, "ole32.lib")
+#pragma comment(lib, "Ole32.lib")
+
+DWORD GetProcessIdByName(const std::wstring& processName)
+{
+    DWORD processId = 0;
+    HANDLE hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+    if (hSnapshot != INVALID_HANDLE_VALUE)
+    {
+        PROCESSENTRY32 pe32;
+        pe32.dwSize = sizeof(PROCESSENTRY32);
+
+        if (Process32First(hSnapshot, &pe32))
+        {
+            do
+            {
+                if (processName == pe32.szExeFile)
+                {
+                    processId = pe32.th32ProcessID;
+                    break;
+                }
+            } while (Process32Next(hSnapshot, &pe32));
+        }
+        CloseHandle(hSnapshot);
+    }
+    return processId;
+}
+
+int main(int argc, char const* argv[])
+{
+    // Initialize COM library
+    HRESULT hr = CoInitialize(nullptr);
+    if (FAILED(hr)) {
+        std::cerr << "Failed to initialize COM library. Error: " << std::hex << hr << "\n";
+        return -1;
+    }
+
+    // Get the IMMDeviceEnumerator
+    IMMDeviceEnumerator* deviceEnumerator = nullptr;
+    hr = CoCreateInstance(__uuidof(MMDeviceEnumerator), nullptr, CLSCTX_ALL, __uuidof(IMMDeviceEnumerator), (void**)&deviceEnumerator);
+    if (FAILED(hr)) {
+        std::cerr << "Failed to create device enumerator. Error: " << std::hex << hr << "\n";
+        CoUninitialize();
+        return -1;
+    }
+
+    // Get the default audio endpoint
+    IMMDevice* device = nullptr;
+    hr = deviceEnumerator->GetDefaultAudioEndpoint(eRender, eConsole, &device);
+    deviceEnumerator->Release();  // Release the enumerator
+
+    if (FAILED(hr)) {
+        std::cerr << "Failed to get default audio endpoint. Error: " << std::hex << hr << "\n";
+        CoUninitialize();
+        return -1;
+    }
+
+    // Get the IAudioSessionManager
+    IAudioSessionManager2* sessionMgr = nullptr;
+
+    hr = device->Activate(__uuidof(IAudioSessionManager2), CLSCTX_ALL, NULL, (void**)&sessionMgr);
+    if (FAILED(hr)) {
+        std::cerr << "Failed to activate IAudioSessionManager. Error: " << std::hex << hr << "\n";
+    }
+    else {
+        std::cout << "IAudioSessionManager activated successfully.\n";
+    }
+
+
+    IAudioSessionEnumerator* sessionEnumerator = nullptr;
+    //hr = sessionMgr->GetSessionEnumerator(&sessionEnumerator);
+    hr = sessionMgr->GetSessionEnumerator(&sessionEnumerator);
+    if (FAILED(hr)) {
+        std::cerr << "Failed to get session enumerator\n";
+        sessionMgr->Release();
+        return(-1);
+    }
+
+    int sessionCount = 0;
+    sessionEnumerator->GetCount(&sessionCount);
+
+
+    //Get the process ID for a specific application (By default Spotify.exe)
+    DWORD targetPID = GetProcessIdByName(L"Spotify.exe");
+    if (targetPID == 0) {
+        std::cout << "Failed to find process\n";
+        sessionEnumerator->Release();
+        sessionMgr->Release();
+        CoUninitialize();
+        return -1;
+    }
+
+    //Find the GUID of the proccess matching the above application
+    LPWSTR sessionIdentifier = nullptr;
+    for (int i = 0; i < sessionCount; i++) {
+        IAudioSessionControl* sessionControl = nullptr;
+        hr = sessionEnumerator->GetSession(i, &sessionControl);
+
+        if (SUCCEEDED(hr)) {
+            IAudioSessionControl2* sessionControl2 = nullptr;
+            hr = sessionControl->QueryInterface(__uuidof(IAudioSessionControl2), (void**)&sessionControl2);
+            sessionControl->Release();
+
+            if (SUCCEEDED(hr)) {
+                DWORD processId;
+                sessionControl2->GetProcessId(&processId);
+                if (processId == targetPID) { 
+                    hr = sessionControl2->GetSessionInstanceIdentifier(&sessionIdentifier);
+                    
+                    if (sessionIdentifier) {
+                        std::wcout << L"Session Identifier (GUID): " << sessionIdentifier << std::endl;
+                    }
+                    else {
+                        std::cerr << "Failed to get session identifier.\n";
+                    }
+
+                    //sessionControl2->Release();
+  
+                }
+                
+                //sessionControl2->Release();
+            }
+        }
+    }
+
+    
+    if (sessionIdentifier != 0) {
+        //Convert LPWSTR to GUID
+        GUID appGuid;
+
+        std::wstring wString;
+        wString.append(&sessionIdentifier[0]);
+        wString = wString.substr(17, 38);
+        LPCOLESTR fStr = const_cast<LPCOLESTR>(wString.c_str());
+        sessionEnumerator->Release();
+
+        std::wcout << "Guid string: " << wString << std::endl;
+   
+        //StringFromGUID2(appGuid, fStr, 38);
+        hr = IIDFromString(fStr, &appGuid);
+        if (FAILED(hr)) {
+            std::cout << "Failed to reoslve GUID \n";
+        }
+        std::cout << appGuid.Data1 << " " << appGuid.Data2 << " " << appGuid.Data3 << " " << appGuid.Data4 << std::endl;
+
+        //Gets simple audio volume 
+        ISimpleAudioVolume* audioVol = nullptr;
+        hr = sessionMgr->GetSimpleAudioVolume(&appGuid, TRUE, &audioVol);
+        if (FAILED(hr)) {
+            std::cerr << "GetSimpleAudioVolume failed\n";
+        }
+        
+        if (audioVol) {
+            std::cout << "hr: " << hr << std::endl;;
+        }
+        float audioLevel;
+        audioVol->GetMasterVolume(&audioLevel);
+        std::cout << "Audio Level: " << audioLevel << "\n";
+
+        /*hr = audioVol->SetMasterVolume(0.0f, NULL);
+        if (FAILED(hr)) {
+            std::cout << "Failed to set volume \n";
+        }*/
+
+        while (TRUE) {
+            /*float r = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
+            Sleep(500);
+            hr = audioVol->SetMasterVolume(r, NULL);
+            audioVol->GetMasterVolume(&audioLevel);
+            std::cout << "Audio Level: " << audioLevel << "\n";*/
+        }
+    }
+    
+    
+    // Uninitialize COM library
+    CoUninitialize();
+    
+    std::cout << "Success\n";
+    return 0;
+}

@@ -1,0 +1,3 @@
+﻿  main.cpp
+Z:\Dev\C++\AudioController\AudioController\main.cpp(149,10): warning C4101: 'appGUID': unreferenced local variable
+  AudioController.vcxproj -> Z:\Dev\C++\AudioController\AudioController\x64\Debug\AudioController.exe
