@@ -32,9 +32,17 @@ DWORD GetProcessIdByName(const std::wstring& processName) {
 }
 
 ISimpleAudioVolume* GetAudioVolumeObj() {
+    
+    // Initialize COM library
+    HRESULT hr = CoInitialize(nullptr);
+    if (FAILED(hr)) {
+        std::cerr << "Failed to initialize COM library. Error: " << std::hex << hr << "\n";
+        return NULL;
+    }
+
     // Get the IMMDeviceEnumerator
     IMMDeviceEnumerator* deviceEnumerator = nullptr;
-    HRESULT hr = CoCreateInstance(__uuidof(MMDeviceEnumerator), nullptr, CLSCTX_ALL, __uuidof(IMMDeviceEnumerator), (void**)&deviceEnumerator);
+    hr = CoCreateInstance(__uuidof(MMDeviceEnumerator), nullptr, CLSCTX_ALL, __uuidof(IMMDeviceEnumerator), (void**)&deviceEnumerator);
     if (FAILED(hr)) {
         std::cerr << "Failed to create device enumerator. Error: " << std::hex << hr << "\n";
         CoUninitialize();
@@ -121,12 +129,6 @@ ISimpleAudioVolume* GetAudioVolumeObj() {
 }
 
 int main() {
-    // Initialize COM library
-    HRESULT hr = CoInitialize(nullptr);
-    if (FAILED(hr)) {
-        std::cerr << "Failed to initialize COM library. Error: " << std::hex << hr << "\n";
-        return -1;
-    }
 
     
 
@@ -134,9 +136,15 @@ int main() {
     BOOL running = TRUE;
     float changeAmount = 0.05f;
 
+    int count = 0;
+
     while (running) {
         if (appVol == nullptr) {
-            appVol = GetAudioVolumeObj();            
+            appVol = GetAudioVolumeObj(); 
+            if (appVol == nullptr) {
+                Sleep(5000);
+                std::cout << "Failed to GetAudioVolumeObj\n";
+            }
         }
         else {
             float currentVol;
@@ -165,8 +173,16 @@ int main() {
                 appVol->SetMute(!muted, NULL);
                 //std::cout << "Muted: " << currentVol << std::endl;
             }
+            Sleep(1000 / 7);
         }
-        Sleep(1000 / 7);
+        
+
+        // Resets the appVol variable every 10 seconds to check if the audio stream is no longer valid.
+        count++;
+        if (count == 70) {
+            appVol = nullptr;
+            count = 0;
+        }
     }
 
     CoUninitialize();
