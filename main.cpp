@@ -209,9 +209,6 @@ int main() {
     while (running) {
         if (appVol == nullptr) {
 
-
-
-
             appVol = GetAudioVolumeObj(processName); 
             if (appVol == nullptr) {
                 Sleep(5000);
@@ -223,7 +220,7 @@ int main() {
             appVol->GetMasterVolume(&currentVol);
 
             // Volume Down Button
-            if (GetAsyncKeyState(VolUp) != 0) {
+            if (GetAsyncKeyState(VolDn) != 0) {
                 if (currentVol <= changeAmount) {
                     appVol->SetMute(TRUE, NULL);
                 }
@@ -232,7 +229,7 @@ int main() {
             }
 
             // Volume Up Button
-            if (GetAsyncKeyState(VolDn) != 0) {
+            if (GetAsyncKeyState(VolUp) != 0) {
                 appVol->SetMute(FALSE, NULL);
                 appVol->SetMasterVolume(currentVol + changeAmount, NULL);
                 //std::cout << "Vol Up: " << currentVol << std::endl;
@@ -243,7 +240,7 @@ int main() {
                 BOOL muted;
                 appVol->GetMute(&muted);
                 appVol->SetMute(!muted, NULL);
-                //std::cout << "Muted: " << currentVol << std::endl;
+                std::cout << "Muted: " << currentVol << std::endl;
             }
             Sleep(1000 / 7);
         }
