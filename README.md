@@ -45,3 +45,6 @@ Sets the key for turning the volume down
 Mute=""
 ```
 Sets the key for muting the program.
+
+## Bugs
+If the program seems to not to be working or says suspended in task manager try running as administrator.
