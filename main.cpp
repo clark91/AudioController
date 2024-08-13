@@ -7,6 +7,10 @@
 #include <Windows.h>
 #include <shellapi.h>
 #include <conio.h>
+#include <sstream>
+#include <fstream>
+#include <locale>
+#include <codecvt>
 
 #pragma comment(lib, "ole32.lib")
 #pragma comment(linker, "/SUBSYSTEM:windows /ENTRY:mainCRTStartup")
@@ -31,7 +35,7 @@ DWORD GetProcessIdByName(const std::wstring& processName) {
     return processId;
 }
 
-ISimpleAudioVolume* GetAudioVolumeObj() {
+ISimpleAudioVolume* GetAudioVolumeObj(std::wstring processName) {
     
     // Initialize COM library
     HRESULT hr = CoInitialize(nullptr);
@@ -82,7 +86,7 @@ ISimpleAudioVolume* GetAudioVolumeObj() {
     int sessionCount = 0;
     sessionEnumerator->GetCount(&sessionCount);
     // Finds the Process ID of Spotify.exe
-    DWORD targetPID = GetProcessIdByName(L"Spotify.exe");
+    DWORD targetPID = GetProcessIdByName(processName);
     if (targetPID == 0) {
         std::cerr << "Failed to find process\n";
         sessionEnumerator->Release();
@@ -128,19 +132,87 @@ ISimpleAudioVolume* GetAudioVolumeObj() {
     return (audioVolume);
 }
 
+// Open and read config file
+int parseFile(std::wstring *processName, float *changeAmount, unsigned int *VolUp, unsigned int *VolDn, unsigned int *Mute) {
+    std::ifstream inputFile;
+    inputFile.open("config.cfg"); // Open cfg file
+
+    if (!inputFile.is_open()) { // Error handling for openning cfg file
+        std::cerr << "Error opening the file!" << std::endl;
+        return 1;
+    }
+    
+    std::string line;
+
+    while (std::getline(inputFile, line)) {
+        std::string key;
+        std::string value;
+
+        key = line.substr(0, line.find("="));
+        value = line.substr(line.find_first_of('"') + 1, line.find_last_of('"') - line.find_first_of('"') - 1);
+
+        if (key == "ProcessName") {
+            std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+            *processName = converter.from_bytes(value);
+        }
+        else if (key == "ChangeAmount") {
+
+            *changeAmount = std::stof(value);
+        }
+        else if (key == "VolUp") {
+            unsigned int hexValue;
+            // Convert Hex string to Hex int
+            std::stringstream ss;
+            ss << std::hex << value;
+            ss >> hexValue;
+            *VolUp = hexValue;
+        }
+        else if (key == "VolDn") {
+            unsigned int hexValue;
+            // Convert Hex string to Hex int
+            std::stringstream ss;
+            ss << std::hex << value;
+            ss >> hexValue;
+            *VolDn = hexValue;
+        }
+        else if (key == "Mute") {
+            unsigned int hexValue;
+            // Convert Hex string to Hex int
+            std::stringstream ss;
+            ss << std::hex << value;
+            ss >> hexValue;
+            *Mute = hexValue;
+        }
+
+        std::cout << key << " = " << value << std::endl;
+    }
+
+    inputFile.close();
+    return 0;
+}
+
 int main() {
 
-    
-
-    ISimpleAudioVolume* appVol = nullptr;
     BOOL running = TRUE;
+
+    std::wstring processName = L"Spotify.exe";
     float changeAmount = 0.05f;
+    unsigned int VolUp = 0x87;
+    unsigned int VolDn = 0x85;
+    unsigned int Mute = 0x86;
+
+    parseFile(&processName, &changeAmount, &VolUp, &VolDn, &Mute);
+    std::wcout << processName << " " << changeAmount << " " << VolUp << " " << VolDn << " " << Mute << std::endl;
 
     int count = 0;
-
+    ISimpleAudioVolume* appVol = nullptr;
     while (running) {
         if (appVol == nullptr) {
-            appVol = GetAudioVolumeObj(); 
+
+
+
+
+            appVol = GetAudioVolumeObj(processName); 
             if (appVol == nullptr) {
                 Sleep(5000);
                 std::cout << "Failed to GetAudioVolumeObj\n";
@@ -151,8 +223,8 @@ int main() {
             appVol->GetMasterVolume(&currentVol);
 
             // Volume Down Button
-            if (GetAsyncKeyState(VK_F22) != 0) {
-                if (currentVol <= 0.05f) {
+            if (GetAsyncKeyState(VolUp) != 0) {
+                if (currentVol <= changeAmount) {
                     appVol->SetMute(TRUE, NULL);
                 }
                 appVol->SetMasterVolume(currentVol - changeAmount, NULL);
@@ -160,14 +232,14 @@ int main() {
             }
 
             // Volume Up Button
-            if (GetAsyncKeyState(VK_F24) != 0) {
+            if (GetAsyncKeyState(VolDn) != 0) {
                 appVol->SetMute(FALSE, NULL);
                 appVol->SetMasterVolume(currentVol + changeAmount, NULL);
                 //std::cout << "Vol Up: " << currentVol << std::endl;
             }
 
             // Volume Mute Button
-            if (GetAsyncKeyState(VK_F23) != 0) {
+            if (GetAsyncKeyState(Mute) != 0) {
                 BOOL muted;
                 appVol->GetMute(&muted);
                 appVol->SetMute(!muted, NULL);

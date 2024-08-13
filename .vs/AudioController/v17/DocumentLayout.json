@@ -1,0 +1,37 @@
+{
+  "Version": 1,
+  "WorkspaceRootPath": "Z:\\Dev\\C\u002B\u002B\\Repos\\AudioController\\",
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{3F154EED-AC5B-49EB-B8FD-ECF3FEBDCA9E}|AudioController.vcxproj|Z:\\Dev\\C\u002B\u002B\\Repos\\AudioController\\main.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
+      "RelativeMoniker": "D:0:0:{3F154EED-AC5B-49EB-B8FD-ECF3FEBDCA9E}|AudioController.vcxproj|solutionrelative:main.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
+    }
+  ],
+  "DocumentGroupContainers": [
+    {
+      "Orientation": 0,
+      "VerticalTabListWidth": 256,
+      "DocumentGroups": [
+        {
+          "DockedWidth": 200,
+          "SelectedChildIndex": 0,
+          "Children": [
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "main.cpp",
+              "DocumentMoniker": "Z:\\Dev\\C\u002B\u002B\\Repos\\AudioController\\main.cpp",
+              "RelativeDocumentMoniker": "main.cpp",
+              "ToolTip": "Z:\\Dev\\C\u002B\u002B\\Repos\\AudioController\\main.cpp",
+              "RelativeToolTip": "main.cpp",
+              "ViewState": "AQIAAAAAAAAAAAAAAAAAAKAAAAAJAAAA",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
+              "WhenOpened": "2024-08-11T20:36:10.152Z",
+              "EditorCaption": ""
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
